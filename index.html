@@ -316,7 +316,7 @@
 const SOURCES = [
   {
     name: 'Inflation Rate YoY',
-    subtitle: 'Year-over-Year %',
+    subtitle: 'Incl. Food & Energy',
     url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRm5GP4dshrJh4qNA60J8EYnR9aE8k2KFqI8eg5MtWfHPKOklCcwFFgLzMaBj4K22vNcVB5hfH7eQnw/pub?gid=1833043029&single=true&output=csv',
     color: '#00e5a0',
     colorFade: 'rgba(0,229,160,0.15)',
@@ -328,6 +328,22 @@ const SOURCES = [
     url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTiSElQa8XCjb0aQ51-BqHEpZ07OpOUwLhQSWtCQ4z7mYZC3Eas7D0xRnuHrxyKUnmEGzoHTWXRl_VU/pub?gid=1490954656&single=true&output=csv',
     color: '#4f8ef7',
     colorFade: 'rgba(79,142,247,0.15)',
+    unit: '%',
+  },
+  {
+    name: 'Full Year GDP Growth',
+    subtitle: 'Annual % Change',
+    url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRNwZT7_BRLLes1-R9szcH-5uWY5QWLFeqVw5T2grmZIL_qDsDrpZwWjmWW3dQft-gIWn5_5eXeleZA/pub?gid=0&single=true&output=csv',
+    color: '#f7c948',
+    colorFade: 'rgba(247,201,72,0.15)',
+    unit: '%',
+  },
+  {
+    name: 'Real GDP QoQ',
+    subtitle: 'Quarter-over-Quarter %',
+    url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSttrcayK5MhHvJ1TrB_k2Gma3nR2rYg5mhn43wA0lXhKZCOHJSSoBj4nAkWnRrMWaYcste96hGdYWE/pub?gid=0&single=true&output=csv',
+    color: '#c084fc',
+    colorFade: 'rgba(192,132,252,0.15)',
     unit: '%',
   },
   {
@@ -347,17 +363,9 @@ const SOURCES = [
     unit: '',
   },
   {
-    name: 'Full Year GDP Growth',
-    subtitle: 'Annual % Change',
-    url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRNwZT7_BRLLes1-R9szcH-5uWY5QWLFeqVw5T2grmZIL_qDsDrpZwWjmWW3dQft-gIWn5_5eXeleZA/pub?gid=0&single=true&output=csv',
-    color: '#f7c948',
-    colorFade: 'rgba(247,201,72,0.15)',
-    unit: '%',
-  },
-  {
-    name: 'Real GDP QoQ',
-    subtitle: 'Quarter-over-Quarter %',
-    url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSttrcayK5MhHvJ1TrB_k2Gma3nR2rYg5mhn43wA0lXhKZCOHJSSoBj4nAkWnRrMWaYcste96hGdYWE/pub?gid=0&single=true&output=csv',
+    name: 'Unemployment Rate',
+    subtitle: '%',
+    url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRrOjeCvMKPrT08Uvaegx2ijIyDhqYDlWZ1lF6EPO76YnGTqp7Uv5OXOVbYJ6oYolYdQRpEYmjQ9vbz/pub?gid=0&single=true&output=csv',
     color: '#c084fc',
     colorFade: 'rgba(192,132,252,0.15)',
     unit: '%',
