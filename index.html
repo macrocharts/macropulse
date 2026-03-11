@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Economic Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #0a0c0f;
+    --surface: #111318;
+    --border: #1e2229;
+    --accent: #00e5a0;
+    --accent2: #4f8ef7;
+    --danger: #ff5a5a;
+    --text: #e8eaf0;
+    --muted: #5a6070;
+    --card: #13161c;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    padding: 32px 24px;
+  }
+
+  header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 40px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .logo-area h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--text);
+  }
+
+  .logo-area h1 span { color: var(--accent); }
+
+  .logo-area p {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .header-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .header-meta-text {
+    text-align: right;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+  }
+
+  .refresh-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.06em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .refresh-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .refresh-btn.spinning .icon { display: inline-block; animation: spin 0.7s linear infinite; }
+
+  .donate-btn {
+    background: transparent;
+    border: 1px solid #f7c948;
+    color: #f7c948;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.06em;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+
+  .donate-btn:hover { background: #f7c948; color: #000; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+  }
+
+  .control-group {
+    display: flex;
+    gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 4px;
+  }
+
+  .control-label {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    align-self: center;
+    margin-right: 4px;
+  }
+
+  button.btn {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 6px 14px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+
+  button.btn:hover { color: var(--text); background: var(--border); }
+  button.btn.active { background: var(--accent); color: #000; font-weight: 500; }
+  button.btn.active.chart-type { background: var(--accent2); color: #fff; }
+
+  .charts-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+
+  @media (max-width: 1100px) { .charts-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 700px)  { .charts-grid { grid-template-columns: 1fr; } }
+
+  .chart-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+    cursor: pointer;
+  }
+
+  .chart-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    opacity: 0.5;
+  }
+
+  .chart-card:hover { border-color: #2e3240; transform: translateY(-2px); }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    backdrop-filter: blur(4px);
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    width: 100%;
+    max-width: 900px;
+    position: relative;
+    animation: modalIn 0.2s ease;
+  }
+
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.96); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  .modal::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    border-radius: 16px 16px 0 0;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+  }
+
+  .modal-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .modal-subtitle {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .modal-close {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 18px;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+
+  .modal-close:hover { color: var(--text); border-color: var(--text); }
+
+  .modal-stats {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+
+  .modal-stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 20px;
+  }
+
+  .modal-stat .stat-label {
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 4px;
+  }
+
+  .modal-stat .stat-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--accent);
+  }
+
+  .modal-stat .stat-value.warn   { color: #f5a623; }
+  .modal-stat .stat-value.danger { color: var(--danger); }
+
+  .modal-canvas-wrap {
+    position: relative;
+    height: 380px;
+  }
+
+  .chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+  }
+
+  .chart-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--text);
+  }
+
+  .chart-subtitle {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 3px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .next-release {
+    color: #f7c948;
+    letter-spacing: 0.04em;
+  }
+
+
+
+  .chart-latest { text-align: right; }
+
+  .chart-latest .value {
+    font-family: 'DM Mono', monospace;
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--accent);
+  }
+
+  .chart-latest .value.warn   { color: #f5a623; }
+  .chart-latest .value.danger { color: var(--danger); }
+
+  .chart-latest .label {
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 2px;
+  }
+
+  .last-updated {
+    font-size: 9px;
+    color: var(--muted);
+    margin-top: 3px;
+    letter-spacing: 0.04em;
+  }
+
+  .chart-canvas-wrap {
+    position: relative;
+    height: 180px;
+  }
+
+  .chart-placeholder {
+    height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .loader {
+    width: 20px; height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+
+  .error-icon { font-size: 20px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-area">
+    <h1>MACRO<span>PULSE</span></h1>
+    <p>US Economic Indicators · Live Dashboard</p>
+    <p style="font-size:10px;color:var(--muted);margin-top:4px;letter-spacing:0.06em;">Source: Bureau of Labor Statistics / Bureau of Economic Analysis</p>
+  </div>
+  <div class="header-meta">
+    <div class="header-meta-text">
+      <div id="live-date"></div>
+    </div>
+    <button class="refresh-btn" onclick="refreshAll()">
+      <span class="icon">↻</span> Refresh
+    </button>
+    <a href="https://www.paypal.com/donate/?hosted_button_id=8W28TH9S5D22W" target="_blank" class="donate-btn">Support us</a>
+  </div>
+</header>
+
+<div class="controls">
+  <span class="control-label">Period</span>
+  <div class="control-group" id="timeline-group">
+    <button class="btn" onclick="setRange(12)"    data-range="12">1Y</button>
+    <button class="btn active" onclick="setRange(36)"  data-range="36">3Y</button>
+    <button class="btn" onclick="setRange(60)"    data-range="60">5Y</button>
+    <button class="btn" onclick="setRange(120)"   data-range="120">10Y</button>
+    <button class="btn" onclick="setRange(240)"   data-range="240">20Y</button>
+    <button class="btn" onclick="setRange(99999)" data-range="99999">All</button>
+  </div>
+
+  <span class="control-label" style="margin-left:8px;">Chart</span>
+  <div class="control-group" id="chart-type-group">
+    <button class="btn chart-type active" onclick="setChartType('line')" data-type="line">Line</button>
+    <button class="btn chart-type"        onclick="setChartType('bar')"  data-type="bar">Bar</button>
+  </div>
+</div>
+
+<div class="charts-grid" id="charts-grid"></div>
+
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modal-title"></div>
+        <div class="modal-subtitle" id="modal-subtitle"></div>
+      </div>
+      <button class="modal-close" onclick="closeModalDirect()">✕</button>
+    </div>
+    <div class="modal-stats" id="modal-stats"></div>
+    <div class="modal-canvas-wrap">
+      <canvas id="modal-chart"></canvas>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── DATA SOURCES ─────────────────────────────────────────────────────────────
+// To add a new metric: copy one object below, update name/subtitle/url/color.
+const SOURCES = [
+  {
+    name: 'Inflation Rate YoY',
+    subtitle: '',
+    url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRm5GP4dshrJh4qNA60J8EYnR9aE8k2KFqI8eg5MtWfHPKOklCcwFFgLzMaBj4K22vNcVB5hfH7eQnw/pub?gid=1833043029&single=true&output=csv',
+    color: '#90ee90',
+    colorFade: 'rgba(144,238,144,0.15)',
+    unit: '%',
+  },
+  {
+    name: 'Core Inflation Rate YoY',
+    subtitle: 'Excl. Food & Energy',
+    url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTiSElQa8XCjb0aQ51-BqHEpZ07OpOUwLhQSWtCQ4z7mYZC3Eas7D0xRnuHrxyKUnmEGzoHTWXRl_VU/pub?gid=1490954656&single=true&output=csv',
+    color: '#90ee90',
+    colorFade: 'rgba(144,238,144,0.15)',
+    unit: '%',
+  },
+  {
+    name: 'PPI YoY',
+    subtitle: 'Producer Prices',
+    url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSkno8izwMNDhl2hi8u8_kUQj4DAqOE8u04F0dT9ps2Opx1NoQLjUmVa47eqFdz-ltBf24qxuYugP9E/pub?gid=0&single=true&output=csv',
+    color: '#4cb64c',
+    colorFade: 'rgba(76,182,76,0.15)',
+    unit: '%',
+  },
+  {
+    name: 'Core PPI YoY',
+    subtitle: 'Excl. Food & Energy',
+    url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSkno8izwMNDhl2hi8u8_kUQj4DAqOE8u04F0dT9ps2Opx1NoQLjUmVa47eqFdz-ltBf24qxuYugP9E/pub?gid=0&single=true&output=csv',
+    color: '#4cb64c',
+    colorFade: 'rgba(76,182,76,0.15)',
+    unit: '%',
+  },
+  {
+    name: 'PCE YoY',
+    subtitle: 'Domestic Personal Consumption',
+    url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSDO-K5-TNFiDNaC5JEKXBCYjRGdLwIV-jXbIvZOK7Ns3LzmJERt1WqidhrSXM0dNgQZTbHzuyod7VP/pub?gid=0&single=true&output=csv',
+    color: '#228b22',
+    colorFade: 'rgba(34,139,34,0.15)',
+    unit: '%',
+  },
+  {
+    name: 'Core PCE YoY',
+    subtitle: 'Excl. Food & Energy',
+    url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR4B7YqcohJWFF-pHotgkHq9GdtERHQCi2kaIdWpEL6_a88L-t2iCgTAOypUMhPReiRXR5c0ChmP3Db/pub?gid=0&single=true&output=csv',
+    color: '#228b22',
+    colorFade: 'rgba(34,139,34,0.15)',
+    unit: '%',
+  },
+  {
+    name: 'Full Year GDP Growth',
+    subtitle: 'Annual % Change',
+    url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRNwZT7_BRLLes1-R9szcH-5uWY5QWLFeqVw5T2grmZIL_qDsDrpZwWjmWW3dQft-gIWn5_5eXeleZA/pub?gid=0&single=true&output=csv',
+    color: '#f7c948',
+    colorFade: 'rgba(247,201,72,0.15)',
+    unit: '%',
+  },
+  {
+    name: 'Quarterly Real GDP YoY',
+    subtitle: '% Change',
+    url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQakwh_yoFwK6v7LxC0ZX6A1oTG4gKM1KPd35PAeJVYcIVlCFqwIfByo0TBXvBhoOPwgktTAL5mRAKc/pub?gid=0&single=true&output=csv',
+    color: '#f7c948',
+    colorFade: 'rgba(247,201,72,0.15)',
+    unit: '%',
+  },
+  {
+    name: 'Quarterly Real GDP QoQ',
+    subtitle: 'Quarter-over-Quarter %',
+    url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSttrcayK5MhHvJ1TrB_k2Gma3nR2rYg5mhn43wA0lXhKZCOHJSSoBj4nAkWnRrMWaYcste96hGdYWE/pub?gid=0&single=true&output=csv',
+    color: '#f7c948',
+    colorFade: 'rgba(247,201,72,0.15)',
+    unit: '%',
+  },
+  {
+    name: 'Unemployment Rate',
+    subtitle: 'Percent',
+    url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRrOjeCvMKPrT08Uvaegx2ijIyDhqYDlWZ1lF6EPO76YnGTqp7Uv5OXOVbYJ6oYolYdQRpEYmjQ9vbz/pub?gid=0&single=true&output=csv',
+    color: '#c084fc',
+    colorFade: 'rgba(192,132,252,0.15)',
+    unit: '%',
+  },
+  {
+    name: 'Nonfarm Payrolls',
+    subtitle: 'Jobs Created',
+    url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTZEitkKOKJt3Ep6ZISe_xdpULSEFWmyFVtdgs7mVvpQD861TRSmowsFQQLTrgnTsNQxlOQYFR4js1O/pub?gid=0&single=true&output=csv',
+    color: '#c084fc',
+    colorFade: 'rgba(192,132,252,0.15)',
+    unit: '',
+  },
+  {
+    name: 'Nonfarm Payrolls Private',
+    subtitle: 'Jobs Created',
+    url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTJ3977JM7foEWM5QngOC1aQaUUHP_tLYfwKC_iAMIeDhE_AIoXD7GZvgfEmEWCW_fKdSWNjJsij8IY/pub?gid=0&single=true&output=csv',
+    color: '#c084fc',
+    colorFade: 'rgba(192,132,252,0.15)',
+    unit: '',
+  },
+  {
+    name: 'Initial Jobless Claims',
+    subtitle: 'Weekly',
+    url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQOsGrBuPpJ5x_BPqDtHsryBwxRrRH0B2tRn4zw8PwgEhgJy00V_r0gGf_WAEkSCfqzuEaLTM8Zm943/pub?gid=1703405568&single=true&output=csv',
+    color: '#c084fc',
+    colorFade: 'rgba(192,132,252,0.15)',
+    unit: '',
+  },
+  {
+    name: 'Continued Jobless Claims',
+    subtitle: 'Weekly',
+    url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTtSJT4oNgq4fT9QDKGlHgj0jh8gEPlX1gM36MVrff5SRwdhL7pab3uH-GAe1GvS7Bsfa_IBuMeEDdO/pub?gid=0&single=true&output=csv',
+    color: '#c084fc',
+    colorFade: 'rgba(192,132,252,0.15)',
+    unit: '',
+  },
+];
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let currentRange = 36;
+let currentType  = 'line';
+const chartInstances = {};
+const loadedData     = {};
+
+// ─── UTILS ───────────────────────────────────────────────────────────────────
+function parseCSV(text) {
+  return text.trim().split('\n')
+    .slice(1)
+    .map(line => {
+      const parts = line.split(',');
+      const date  = new Date(parts[0].trim().replace(/"/g, ''));
+      const value = parseFloat(parts[1]);
+      return { date, value };
+    })
+    .filter(d => !isNaN(d.value) && !isNaN(d.date))
+    .sort((a, b) => a.date - b.date);
+}
+
+function filterByRange(data, months) {
+  if (months >= 99999) return data;
+  const cutoff = new Date();
+  cutoff.setMonth(cutoff.getMonth() - months);
+  return data.filter(d => d.date >= cutoff);
+}
+
+function getColorClass(val) {
+  if (val >= 5) return 'danger';
+  if (val >= 3) return 'warn';
+  return '';
+}
+
+function formatLabel(d) {
+  return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+}
+
+function timeAgo(ts) {
+  const s = Math.floor((Date.now() - ts) / 1000);
+  if (s < 60)   return 'just now';
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  return `${Math.floor(s / 3600)}h ago`;
+}
+
+function slugify(name) { return name.replace(/\s/g, '_'); }
+
+// ─── BUILD CARD SKELETON ──────────────────────────────────────────────────────
+function createCard(source) {
+  const s   = slugify(source.name);
+  const div = document.createElement('div');
+  div.className = 'chart-card';
+  div.id = `card-${s}`;
+  div.onclick = () => openModal(source.name);
+  div.innerHTML = `
+    <div class="chart-header">
+      <div>
+        <div class="chart-title">${source.name}</div>
+        <div class="chart-subtitle">${source.subtitle} <span class="next-release" id="release-${s}"></span></div>
+
+      </div>
+      <div class="chart-latest" id="latest-${s}">
+        <div class="value">—</div>
+        <div class="label">Latest</div>
+        <div class="last-updated" id="updated-${s}"></div>
+      </div>
+    </div>
+    <div id="wrap-${s}">
+      <div class="chart-placeholder">
+        <div class="loader"></div>
+        <span>Fetching data…</span>
+      </div>
+    </div>
+  `;
+  return div;
+}
+
+// ─── FETCH ────────────────────────────────────────────────────────────────────
+async function fetchSource(source) {
+  const url = source.url + '&cachebust=' + Date.now();
+  const res = await fetch(url, { mode: 'cors', cache: 'no-store' });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const text = await res.text();
+  const data = parseCSV(text);
+  if (!data.length) throw new Error('No valid rows found');
+
+  // Extract A2 (row index 1, column index 0) as next release date
+  const rows = text.trim().split('\n');
+  let nextRelease = '';
+  if (rows.length > 1) {
+    const cols = rows[1].split(',');
+    if (cols.length > 0) nextRelease = cols[0].trim().replace(/"/g, '');
+  }
+
+  loadedData[source.name] = { data, fetchedAt: Date.now(), nextRelease };
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+function renderChart(source) {
+  const cached = loadedData[source.name];
+  if (!cached) return;
+
+  const s        = slugify(source.name);
+  const wrap     = document.getElementById(`wrap-${s}`);
+  const latestEl = document.getElementById(`latest-${s}`);
+  const updEl    = document.getElementById(`updated-${s}`);
+  if (!wrap) return;
+
+  const filtered = filterByRange(cached.data, currentRange);
+  if (!filtered.length) return;
+
+  // Update stat
+  const latest = filtered[filtered.length - 1];
+  latestEl.querySelector('.value').className = `value ${getColorClass(latest.value)}`;
+  latestEl.querySelector('.value').textContent = latest.value.toFixed(source.unit === '%' ? 1 : 0) + source.unit;
+  if (updEl) updEl.textContent = 'Updated ' + timeAgo(cached.fetchedAt);
+
+  // Show next release date from B2
+  const releaseEl = document.getElementById(`release-${s}`);
+  if (releaseEl && cached.nextRelease) releaseEl.textContent = '· Next: ' + cached.nextRelease;
+
+  // Ensure canvas exists
+  if (!document.getElementById(`chart-${s}`)) {
+    wrap.innerHTML = `<canvas id="chart-${s}"></canvas>`;
+    wrap.className = 'chart-canvas-wrap';
+  }
+
+  const canvas = document.getElementById(`chart-${s}`);
+  if (!canvas) return;
+
+  if (chartInstances[source.name]) {
+    chartInstances[source.name].destroy();
+  }
+
+  const isLine = currentType === 'line';
+
+  chartInstances[source.name] = new Chart(canvas.getContext('2d'), {
+    type: currentType,
+    data: {
+      labels: filtered.map(d => formatLabel(d.date)),
+      datasets: [{
+        label: source.name,
+        data: filtered.map(d => d.value),
+        borderColor: source.color,
+        backgroundColor: isLine ? source.colorFade : source.color + 'cc',
+        borderWidth: isLine ? 2 : 0,
+        pointRadius: filtered.length > 60 ? 0 : 2,
+        pointHoverRadius: 4,
+        fill: isLine,
+        tension: 0.3,
+        borderRadius: isLine ? 0 : 3,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 300 },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1a1e26',
+          borderColor: '#2e3240',
+          borderWidth: 1,
+          titleColor: '#9aa0b0',
+          bodyColor: source.color,
+          bodyFont: { family: 'DM Mono', size: 13, weight: '500' },
+          titleFont: { family: 'DM Mono', size: 10 },
+          callbacks: { label: ctx => ` ${ctx.parsed.y.toFixed(source.unit === '%' ? 1 : 0)}${source.unit}` }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: '#1a1e24', drawTicks: false },
+          ticks: { color: '#4a5060', font: { family: 'DM Mono', size: 9 }, maxTicksLimit: 8, maxRotation: 0 },
+          border: { color: '#1e2229' }
+        },
+        y: {
+          grid: { color: '#1a1e24', drawTicks: false },
+          ticks: { color: '#4a5060', font: { family: 'DM Mono', size: 9 }, callback: v => parseFloat(v.toFixed(source.unit === '%' ? 1 : 0)) + source.unit },
+          border: { color: '#1e2229', dash: [3, 3] }
+        }
+      }
+    }
+  });
+}
+
+function showError(source, msg) {
+  const wrap = document.getElementById(`wrap-${slugify(source.name)}`);
+  if (wrap) wrap.innerHTML = `
+    <div class="chart-placeholder">
+      <span class="error-icon">⚠</span>
+      <span>Failed to load data</span>
+      <span style="font-size:10px;color:#3a4050">${msg}</span>
+    </div>`;
+}
+
+// ─── LOAD ALL ─────────────────────────────────────────────────────────────────
+async function loadAll(force = false) {
+  const btn = document.querySelector('.refresh-btn');
+  if (btn) btn.classList.add('spinning');
+
+  await Promise.all(SOURCES.map(async source => {
+    try {
+      if (force || !loadedData[source.name]) await fetchSource(source);
+      renderChart(source);
+    } catch (err) {
+      console.error(source.name, err);
+      showError(source, err.message);
+    }
+  }));
+
+  if (btn) btn.classList.remove('spinning');
+}
+
+// ─── REFRESH ─────────────────────────────────────────────────────────────────
+function refreshAll() {
+  SOURCES.forEach(source => {
+    const s    = slugify(source.name);
+    const wrap = document.getElementById(`wrap-${s}`);
+    if (wrap) {
+      wrap.className = '';
+      wrap.innerHTML = `<div class="chart-placeholder"><div class="loader"></div><span>Fetching data…</span></div>`;
+    }
+    if (chartInstances[source.name]) {
+      chartInstances[source.name].destroy();
+      delete chartInstances[source.name];
+    }
+  });
+  loadAll(true);
+}
+
+// ─── CONTROLS ────────────────────────────────────────────────────────────────
+function setRange(months) {
+  currentRange = months;
+  document.querySelectorAll('#timeline-group .btn').forEach(b =>
+    b.classList.toggle('active', parseInt(b.dataset.range) === months));
+  SOURCES.forEach(s => renderChart(s));
+}
+
+function setChartType(type) {
+  currentType = type;
+  document.querySelectorAll('#chart-type-group .btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.type === type));
+  SOURCES.forEach(s => renderChart(s));
+}
+
+// ─── MODAL ────────────────────────────────────────────────────────────────────
+let modalChart = null;
+
+function openModal(sourceName) {
+  const source = SOURCES.find(s => s.name === sourceName);
+  const cached = loadedData[sourceName];
+  if (!source || !cached) return;
+
+  const filtered = filterByRange(cached.data, currentRange);
+  if (!filtered.length) return;
+
+  // Populate header
+  document.getElementById('modal-title').textContent = source.name;
+  document.getElementById('modal-subtitle').textContent = source.subtitle;
+
+  // Compute stats
+  const values = filtered.map(d => d.value);
+  const latest = values[values.length - 1];
+  const min    = Math.min(...values);
+  const max    = Math.max(...values);
+  const avg    = values.reduce((a, b) => a + b, 0) / values.length;
+  const dec    = source.unit === '%' ? 1 : 0;
+  const cc     = getColorClass(latest);
+
+  document.getElementById('modal-stats').innerHTML = `
+    <div class="modal-stat">
+      <div class="stat-label">Latest</div>
+      <div class="stat-value ${cc}">${latest.toFixed(dec)}${source.unit}</div>
+    </div>
+    <div class="modal-stat">
+      <div class="stat-label">Average</div>
+      <div class="stat-value">${avg.toFixed(dec)}${source.unit}</div>
+    </div>
+    <div class="modal-stat">
+      <div class="stat-label">High</div>
+      <div class="stat-value">${max.toFixed(dec)}${source.unit}</div>
+    </div>
+    <div class="modal-stat">
+      <div class="stat-label">Low</div>
+      <div class="stat-value">${min.toFixed(dec)}${source.unit}</div>
+    </div>
+    ${cached.nextRelease ? `<div class="modal-stat"><div class="stat-label">Next Release</div><div class="stat-value" style="font-size:13px;color:#f7c948">${cached.nextRelease}</div></div>` : ''}
+  `;
+
+  // Render expanded chart
+  if (modalChart) { modalChart.destroy(); modalChart = null; }
+
+  const canvas = document.getElementById('modal-chart');
+  const isLine = currentType === 'line';
+
+  modalChart = new Chart(canvas.getContext('2d'), {
+    type: currentType,
+    data: {
+      labels: filtered.map(d => formatLabel(d.date)),
+      datasets: [{
+        label: source.name,
+        data: filtered.map(d => d.value),
+        borderColor: source.color,
+        backgroundColor: isLine ? source.colorFade : source.color + 'cc',
+        borderWidth: isLine ? 2 : 0,
+        pointRadius: filtered.length > 120 ? 0 : 3,
+        pointHoverRadius: 5,
+        fill: isLine,
+        tension: 0.3,
+        borderRadius: isLine ? 0 : 3,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 250 },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1a1e26',
+          borderColor: '#2e3240',
+          borderWidth: 1,
+          titleColor: '#9aa0b0',
+          bodyColor: source.color,
+          bodyFont: { family: 'DM Mono', size: 14, weight: '500' },
+          titleFont: { family: 'DM Mono', size: 11 },
+          callbacks: { label: ctx => ` ${ctx.parsed.y.toFixed(dec)}${source.unit}` }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: '#1a1e24', drawTicks: false },
+          ticks: { color: '#4a5060', font: { family: 'DM Mono', size: 10 }, maxTicksLimit: 10, maxRotation: 0 },
+          border: { color: '#1e2229' }
+        },
+        y: {
+          grid: { color: '#1a1e24', drawTicks: false },
+          ticks: { color: '#4a5060', font: { family: 'DM Mono', size: 10 }, callback: v => parseFloat(v.toFixed(dec)) + source.unit },
+          border: { color: '#1e2229', dash: [3, 3] }
+        }
+      }
+    }
+  });
+
+  document.getElementById('modal-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModalDirect() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+  if (modalChart) { modalChart.destroy(); modalChart = null; }
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModalDirect();
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModalDirect(); });
+document.getElementById('live-date').textContent = new Date().toLocaleDateString('en-US', {
+  weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
+});
+
+const grid = document.getElementById('charts-grid');
+SOURCES.forEach(source => grid.appendChild(createCard(source)));
+loadAll();
+</script>
+</body>
+</html>
+
